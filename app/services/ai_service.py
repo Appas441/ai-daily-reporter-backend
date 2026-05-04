@@ -1,6 +1,7 @@
 from openai import OpenAI
 from app.utils.config import OPENAI_API_KEY
 
+
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def format_logs(logs):

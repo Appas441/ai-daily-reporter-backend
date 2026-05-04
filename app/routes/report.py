@@ -1,57 +1,99 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
-from app.models.log_model import Log
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
+import threading
+import time
+
 from app.services.email_service import send_email
-from app.utils.file_handler import read_logs, write_logs
 
 router = APIRouter()
 
-# ✅ Request models
-class StartDayRequest(BaseModel):
+
+# ✅ Request Model
+class EmailRequest(BaseModel):
     text: str
+    datetime: str  # "2026-05-04 11:00"
+    to_email: EmailStr
+    cc_email: EmailStr | None = None
 
-class EndDayRequest(BaseModel):
-    text: str
+
+# ✅ FUNCTION TO DELAY EMAIL
+def schedule_email(send_time_str, subject, content, to_email, cc_email):
+    try:
+        send_time = datetime.strptime(send_time_str, "%Y-%m-%d %H:%M")
+        now = datetime.now()
+
+        delay = (send_time - now).total_seconds()
+
+        if delay <= 0:
+            print("❌ Time already passed")
+            return
+
+        print(f"⏳ Email will send in {delay} seconds")
+
+        time.sleep(delay)
+
+        send_email(subject, content, to_email, cc_email)
+
+        print("✅ Email sent successfully")
+
+    except Exception as e:
+        print("Schedule Error:", e)
 
 
-# ✅ START DAY (dynamic)
+# ✅ START DAY
 @router.post("/start-day")
-def start_day(data: StartDayRequest):
-    content = f"""Hi Sir,
+def start_day(data: EmailRequest):
+    try:
+        content = f"""Hi Sir,
 
 {data.text}
 
 Regards,
 Appas
 """
-    send_email("Start of Day", content)
-    return {"message": "Start day email sent"}
+
+        threading.Thread(
+            target=schedule_email,
+            args=(
+                data.datetime,
+                "Start of Day",
+                content,
+                data.to_email,
+                data.cc_email,
+            ),
+        ).start()
+
+        return {"message": "Start Day scheduled ⏳"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed ❌")
 
 
-# ✅ SAVE LOG (optional, for storage only)
-@router.post("/log")
-def save_log(log: Log):
-    logs = read_logs()
-    logs.append(log.text)
-    write_logs(logs)
-    return {"message": "Log saved"}
-
-
-# ✅ END DAY (dynamic — uses textarea ONLY)
+# ✅ END DAY
 @router.post("/end-day")
-def end_day(data: EndDayRequest):
-    content = f"""Hi Sir,
+def end_day(data: EmailRequest):
+    try:
+        content = f"""Hi Sir,
 
 {data.text}
 
 Regards,
 Appas
 """
-    send_email("End of Day", content)
-    return {"message": "End day email sent"}
 
+        threading.Thread(
+            target=schedule_email,
+            args=(
+                data.datetime,
+                "End of Day",
+                content,
+                data.to_email,
+                data.cc_email,
+            ),
+        ).start()
 
-# ✅ GET LOGS (optional)
-@router.get("/logs")
-def get_logs():
-    return read_logs()
+        return {"message": "End Day scheduled ⏳"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed ❌")
