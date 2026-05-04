@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
+from datetime import datetime, timedelta
 import threading
 import time
 
@@ -9,30 +9,32 @@ from app.services.email_service import send_email
 router = APIRouter()
 
 
-# ✅ REQUEST MODEL
+# ✅ REQUEST MODEL (MATCH FRONTEND)
 class EmailRequest(BaseModel):
     text: str
     date: str       # "2026-05-04"
-    time: str       # "11:00"
+    time: str       # "12:46"
     to_email: EmailStr
     cc_email: EmailStr | None = None
 
 
-# ✅ SCHEDULER FUNCTION
+# ✅ SCHEDULER FUNCTION (IST → UTC FIXED)
 def schedule_email(date, time_str, subject, content, to_email, cc_email):
     try:
-        # ✅ combine date + time
-        send_time_str = f"{date} {time_str}"
-        send_time = datetime.strptime(send_time_str, "%Y-%m-%d %H:%M")
+        # 👉 Combine date + time
+        send_time = datetime.strptime(f"{date} {time_str}", "%Y-%m-%d %H:%M")
 
-        print(f"📅 Scheduled for: {send_time}")
+        # 👉 Convert IST → UTC (IMPORTANT)
+        send_time = send_time - timedelta(hours=5, minutes=30)
+
+        print(f"🕒 IST TIME: {date} {time_str}")
+        print(f"🌍 UTC TIME: {send_time}")
 
         while True:
-            now = datetime.now()
+            now = datetime.utcnow()
 
-            print(f"⏳ Now: {now} | Target: {send_time}")
+            print(f"⏳ Waiting... Now(UTC): {now} | Target(UTC): {send_time}")
 
-            # ✅ send when time reached
             if now >= send_time:
                 print("🚀 Sending email now...")
 
@@ -41,15 +43,17 @@ def schedule_email(date, time_str, subject, content, to_email, cc_email):
                 print("✅ Email sent successfully")
                 break
 
-            time.sleep(5)  # check every 5 sec (faster)
+            time.sleep(10)  # check every 10 seconds
 
     except Exception as e:
         print("❌ Schedule Error:", str(e))
 
 
-# ✅ COMMON FUNCTION (avoid duplicate code)
-def schedule_task(data: EmailRequest, subject: str):
-    content = f"""Hi Sir,
+# ✅ START DAY
+@router.post("/start-day")
+def start_day(data: EmailRequest):
+    try:
+        content = f"""Hi Sir,
 
 {data.text}
 
@@ -57,46 +61,53 @@ Regards,
 Appas
 """
 
-    thread = threading.Thread(
-        target=schedule_email,
-        args=(
-            data.date,
-            data.time,
-            subject,
-            content,
-            data.to_email,
-            data.cc_email,
-        ),
-        daemon=True
-    )
-    thread.start()
-
-
-# ✅ START DAY
-@router.post("/start-day")
-def start_day(data: EmailRequest):
-    try:
-        print("📩 Start Day Request:", data)
-
-        schedule_task(data, "Start of Day")
+        threading.Thread(
+            target=schedule_email,
+            args=(
+                data.date,
+                data.time,
+                "Start of Day",
+                content,
+                data.to_email,
+                data.cc_email,
+            ),
+            daemon=True  # ✅ important for background task
+        ).start()
 
         return {"message": "Start Day scheduled ⏳"}
 
     except Exception as e:
         print("❌ Start Day Error:", str(e))
-        raise HTTPException(status_code=500, detail="Failed to schedule ❌")
+        raise HTTPException(status_code=500, detail="Failed ❌")
 
 
 # ✅ END DAY
 @router.post("/end-day")
 def end_day(data: EmailRequest):
     try:
-        print("📩 End Day Request:", data)
+        content = f"""Hi Sir,
 
-        schedule_task(data, "End of Day")
+{data.text}
+
+Regards,
+Appas
+"""
+
+        threading.Thread(
+            target=schedule_email,
+            args=(
+                data.date,
+                data.time,
+                "End of Day",
+                content,
+                data.to_email,
+                data.cc_email,
+            ),
+            daemon=True
+        ).start()
 
         return {"message": "End Day scheduled ⏳"}
 
     except Exception as e:
         print("❌ End Day Error:", str(e))
-        raise HTTPException(status_code=500, detail="Failed to schedule ❌")
+        raise HTTPException(status_code=500, detail="Failed ❌")
