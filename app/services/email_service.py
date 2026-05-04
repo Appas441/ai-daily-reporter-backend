@@ -1,15 +1,16 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
 
-EMAIL = os.getenv("EMAIL")
-PASSWORD = os.getenv("APP_PASSWORD")
+from app.utils.config import EMAIL, APP_PASSWORD
 
 
 def send_email(subject, content, to_email, cc_email=None):
     try:
-        print("📧 Connecting to SMTP...")
+        print("📧 Preparing email...")
+        print("FROM:", EMAIL)
+        print("TO:", to_email)
+        print("CC:", cc_email)
 
         msg = MIMEMultipart()
         msg["From"] = EMAIL
@@ -25,19 +26,23 @@ def send_email(subject, content, to_email, cc_email=None):
         if cc_email:
             recipients.append(cc_email)
 
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
+        print("🔐 Connecting to Gmail SMTP...")
 
-        print("🔐 Logging in...")
-        server.login(EMAIL, PASSWORD)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+
+        print("🔑 Logging in...")
+        server.login(EMAIL, APP_PASSWORD)
 
         print("📤 Sending email...")
         server.sendmail(EMAIL, recipients, msg.as_string())
 
         server.quit()
 
-        print("✅ Email sent successfully")
+        print("✅ EMAIL SENT SUCCESSFULLY")
 
     except Exception as e:
-        print("❌ Email Error:", str(e))
+        print("❌ EMAIL ERROR:", str(e))
         raise
