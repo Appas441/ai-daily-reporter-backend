@@ -7,18 +7,19 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# ✅ CORS (FIXED)
+# ✅ FINAL CORS FIX
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://appas441.github.io",
+    "https://appas441.github.io/ai-daily-reporter-frontend",  # 🔥 important
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,   # ✅ specific origins only
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],   # allow POST, OPTIONS, etc.
     allow_headers=["*"],
 )
 
@@ -30,7 +31,7 @@ def home():
         "status": "success"
     }
 
-# ✅ HEALTH CHECK
+# ✅ HEALTH
 @app.get("/health")
 def health():
     return {
