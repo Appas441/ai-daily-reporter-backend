@@ -7,23 +7,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# ✅ CORS CONFIG (GitHub Pages + Local)
+# ✅ CORS (FIXED)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://appas441.github.io",
-    "https://appas441.github.io/ai-daily-reporter-frontend",  # ✅ important
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 🔥 safer for now (avoid CORS issues)
+    allow_origins=origins,   # ✅ specific origins only
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ ROOT ROUTE
+# ✅ ROOT
 @app.get("/")
 def home():
     return {
@@ -31,7 +30,7 @@ def home():
         "status": "success"
     }
 
-# ✅ HEALTH CHECK (used by Render)
+# ✅ HEALTH CHECK
 @app.get("/health")
 def health():
     return {
@@ -39,15 +38,15 @@ def health():
         "service": "backend running"
     }
 
-# ✅ STARTUP EVENT
+# ✅ STARTUP
 @app.on_event("startup")
 def startup_event():
     print("🚀 Backend started successfully")
 
-# ✅ SHUTDOWN EVENT
+# ✅ SHUTDOWN
 @app.on_event("shutdown")
 def shutdown_event():
     print("🛑 Backend shutting down")
 
-# ✅ INCLUDE ROUTES
-app.include_router(router, prefix="")  # optional prefix
+# ✅ ROUTES
+app.include_router(router)

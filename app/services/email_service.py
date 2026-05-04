@@ -1,53 +1,42 @@
 import smtplib
-import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
-
-# ✅ GET ENV VARIABLES (Render uses this)
-EMAIL = os.getenv("EMAIL")
-APP_PASSWORD = os.getenv("APP_PASSWORD")
+from app.utils.config import EMAIL, APP_PASSWORD
 
 
 def send_email(subject, content, to_email, cc_email=None):
     try:
-        # 🔍 DEBUG (VERY IMPORTANT)
-        print("📧 EMAIL:", EMAIL)
-        print("🔐 APP_PASSWORD:", "SET" if APP_PASSWORD else "NOT SET")
-        print("📨 TO:", to_email)
-        print("📨 CC:", cc_email)
+        print("📧 Preparing email...")
 
-        if not EMAIL or not APP_PASSWORD:
-            raise Exception("Email credentials not set in environment variables")
-
-        # ✅ CREATE MESSAGE
         msg = MIMEMultipart()
         msg["From"] = EMAIL
         msg["To"] = to_email
         msg["Subject"] = subject
 
+        recipients = [to_email]
+
         if cc_email:
             msg["Cc"] = cc_email
+            recipients.append(cc_email)
 
         msg.attach(MIMEText(content, "plain"))
 
-        recipients = [to_email]
-        if cc_email:
-            recipients.append(cc_email)
+        print("🔐 Connecting to Gmail SMTP...")
 
-        # ✅ GMAIL SMTP
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.ehlo()
         server.starttls()
         server.ehlo()
 
+        print("🔑 Logging in...")
         server.login(EMAIL, APP_PASSWORD)
 
+        print("📤 Sending email to:", recipients)
         server.sendmail(EMAIL, recipients, msg.as_string())
+
         server.quit()
 
-        print("✅ EMAIL SENT SUCCESSFULLY")
+        print("✅ Email sent successfully")
 
     except Exception as e:
         print("❌ EMAIL ERROR:", str(e))
-        raise
