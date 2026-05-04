@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 fastapi
 uvicorn
+pydantic
 python-dotenv
-=======
-fastapi
-uvicorn
-python-dotenv
->>>>>>> b8a7d18fde118dca54586a0508d0a0939ed7f9d3
+email-validator
